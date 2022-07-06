@@ -142,7 +142,7 @@ class BackgroundLocationService: MethodChannel.MethodCallHandler, PluginRegistry
 
     private fun stopLocationService(): Int {
         service?.removeLocationUpdates()
-//        LocalBroadcastManager.getInstance(context!!).unregisterReceiver(receiver!!)
+        LocalBroadcastManager.getInstance(context!!).unregisterReceiver(receiver!!)
 
         if (bound) {
             context!!.unbindService(serviceConnection)
@@ -172,7 +172,7 @@ class BackgroundLocationService: MethodChannel.MethodCallHandler, PluginRegistry
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result) {
         when (call.method) {
-            "stop_location_service" -> result.success(stopLocationService())
+            "stop_service" -> result.success(stopLocationService())
             "start_service" -> result.success(startLocationService(call.argument("distance_filter"), call.argument("force_location_manager")))
             "set_android_notification" -> result.success(setAndroidNotification(call.argument("title"),call.argument("message"),call.argument("icon")))
             "set_configuration" -> result.success(setConfiguration(call.argument<String>("interval")?.toLongOrNull()))
