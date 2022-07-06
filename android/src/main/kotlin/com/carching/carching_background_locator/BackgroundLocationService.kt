@@ -1,4 +1,4 @@
-package com.example.carching_background_locator
+package com.carching.carching_background_locator
 
 import android.Manifest
 
@@ -16,8 +16,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.example.carching_background_locator.CarchingBackgroundLocatorPlugin
-import com.example.carching_background_locator.R
+import com.carching.carching_background_locator.CarchingBackgroundLocatorPlugin
+import com.carching.carching_background_locator.R
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.*
 

@@ -1,4 +1,4 @@
-package com.example.carching_background_locator
+package com.carching.carching_background_locator
 
 import android.app.Activity
 import android.content.Context
@@ -14,7 +14,7 @@ import android.location.*
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
-import com.example.carching_background_locator.BackgroundLocationService
+import com.carching.carching_background_locator.BackgroundLocationService
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.PluginRegistry

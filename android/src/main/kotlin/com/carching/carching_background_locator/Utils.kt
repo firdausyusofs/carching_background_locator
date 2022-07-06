@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.example.carching_background_locator
+package com.carching.carching_background_locator
 
 import android.content.Context
-import com.example.carching_background_locator.CarchingBackgroundLocatorPlugin
+import com.carching.carching_background_locator.CarchingBackgroundLocatorPlugin
 
 internal object Utils {
 
