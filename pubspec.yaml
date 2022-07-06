@@ -28,7 +28,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.example.carching_background_locator
+        package: com.carching.carching_background_locator
         pluginClass: CarchingBackgroundLocatorPlugin
       ios:
         pluginClass: CarchingBackgroundLocatorPlugin
