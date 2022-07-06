@@ -11,6 +11,7 @@
             android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="true"
+            tools:node="replace"
             android:permission="" />
     </application>
 </manifest>

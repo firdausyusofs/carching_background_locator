@@ -137,7 +137,7 @@ class BackgroundLocationService: MethodChannel.MethodCallHandler, PluginRegistry
     }
 
     override fun onCancel(arguments: Any?) {
-        TODO("Not yet implemented")
+        print("hello $arguments")
     }
 
     private fun stopLocationService(): Int {
