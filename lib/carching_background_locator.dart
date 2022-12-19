@@ -1,85 +1,84 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
-import 'package:carching_background_locator/location.dart';
+import 'package:carching_background_locator/keys.dart';
+
+import 'package:carching_background_locator/settings/android_settings.dart';
+import 'package:carching_background_locator/settings/ios_settings.dart';
+import 'package:carching_background_locator/utils/settings_util.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import 'auto_stop_handler.dart';
+import 'callback_dispatcher.dart';
+import 'location_dto.dart';
+
 class CarchingBackgroundLocator {
-  static const MethodChannel _channel = MethodChannel('carching_background_locator/methods');
-  static const EventChannel _eventChannel = EventChannel('carching_background_locator/events');
+  static const MethodChannel _channel = MethodChannel(Keys.CHANNEL_ID);
 
-  static startLocationService({double distanceFilter = 0.0}) async {
-    return await _channel.invokeMethod("start_service", <String, dynamic>{'distance_filter': distanceFilter, 'force_location_manager': false});
+  static Future<void> initialize() async {
+    final CallbackHandle callback =
+    PluginUtilities.getCallbackHandle(callbackDispatcher)!;
+    await _channel.invokeMethod(Keys.METHOD_PLUGIN_INITIALIZE_SERVICE,
+        {Keys.ARG_CALLBACK_DISPATCHER: callback.toRawHandle()});
   }
 
-  static stopLocationService() async {
-    return await _channel.invokeMethod("stop_service");
-  }
-
-  static setAndroidNotification({String? title, String? message, String? icon}) async {
-    if (Platform.isAndroid) {
-      return await _channel.invokeMethod('set_android_notification', <String, dynamic>{'title': title, 'message': message, 'icon': icon});
+  static Future<void> registerLocationUpdate(
+      void Function(LocationDto) callback,
+      {void Function(Map<String, dynamic>)? initCallback,
+        Map<String, dynamic> initDataCallback = const {},
+        void Function()? disposeCallback,
+        bool autoStop = false,
+        AndroidSettings androidSettings = const AndroidSettings(),
+        IOSSettings iosSettings = const IOSSettings()}) async {
+    if (autoStop) {
+      WidgetsBinding.instance!.addObserver(AutoStopHandler());
     }
+
+    final args = SettingsUtil.getArgumentsMap(
+        callback: callback,
+        initCallback: initCallback,
+        initDataCallback: initDataCallback,
+        disposeCallback: disposeCallback,
+        androidSettings: androidSettings,
+        iosSettings: iosSettings);
+
+    await _channel.invokeMethod(
+        Keys.METHOD_PLUGIN_REGISTER_LOCATION_UPDATE, args);
   }
 
-  Future<Location> getCurrentLocation() async {
-    var completer = Completer<Location>();
-
-    var _data = Location();
-    await onUpdate((p0) {
-      _data.latitude = p0.latitude;
-      _data.longitude = p0.longitude;
-      _data.accuracy = p0.accuracy;
-      _data.altitude = p0.altitude;
-      _data.bearing = p0.bearing;
-      _data.speed = p0.speed;
-      _data.time = p0.time;
-      completer.complete(_data);
-    });
-
-    return completer.future;
+  static Future<void> unRegisterLocationUpdate() async {
+    await _channel.invokeMethod(Keys.METHOD_PLUGIN_UN_REGISTER_LOCATION_UPDATE);
   }
 
-  static onUpdate(Function(Location) location) {
-    if (Platform.isIOS) {
-      _channel.setMethodCallHandler((MethodCall call) async {
-        if (call.method == 'location') {
-          var locationData = Map.from(call.arguments);
+  static Future<bool> isRegisterLocationUpdate() async {
+    return (await _channel
+        .invokeMethod<bool>(Keys.METHOD_PLUGIN_IS_REGISTER_LOCATION_UPDATE))!;
+  }
 
-          location(
-              Location(
-                latitude: locationData['latitude'],
-                longitude: locationData['longitude'],
-                altitude: locationData['altitude'],
-                accuracy: locationData['accuracy'],
-                bearing: locationData['bearing'],
-                speed: locationData['speed'],
-                time: locationData['time'],
-              )
-          );
-        }
-      });
-    } else {
-      void _onEvent(Object? event) {
-        if (event != null) {
-          var locationData = Map.from(event as Map);
-          // Call the user passed function
-          location(
-            Location(
-                latitude: locationData['latitude'],
-                longitude: locationData['longitude'],
-                altitude: locationData['altitude'],
-                accuracy: locationData['accuracy'],
-                bearing: locationData['bearing'],
-                speed: locationData['speed'],
-                time: locationData['time'],)
-          );
-        }
-      }
+  static Future<bool> isServiceRunning() async {
+    return (await _channel
+        .invokeMethod<bool>(Keys.METHOD_PLUGIN_IS_SERVICE_RUNNING))!;
+  }
 
-      _eventChannel.receiveBroadcastStream().listen(_onEvent, onError: null);
+  static Future<void> updateNotificationText(
+      {String? title, String? msg, String? bigMsg}) async {
+    final Map<String, dynamic> arg = {};
+
+    if (title != null) {
+      arg[Keys.SETTINGS_ANDROID_NOTIFICATION_TITLE] = title;
     }
-  }
 
+    if (msg != null) {
+      arg[Keys.SETTINGS_ANDROID_NOTIFICATION_MSG] = msg;
+    }
+
+    if (bigMsg != null) {
+      arg[Keys.SETTINGS_ANDROID_NOTIFICATION_BIG_MSG] = bigMsg;
+    }
+
+    await _channel.invokeMethod(Keys.METHOD_PLUGIN_UPDATE_NOTIFICATION, arg);
+  }
 }

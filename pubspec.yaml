@@ -1,6 +1,6 @@
 name: carching_background_locator
 description: This is a plugin for accessing background location on iOS and Android
-version: 0.0.1
+version: 0.0.2
 homepage:
 
 environment:
