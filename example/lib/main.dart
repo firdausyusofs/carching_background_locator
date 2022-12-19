@@ -105,6 +105,16 @@ class _MyAppState extends State<MyApp> {
                   }
                   },
                 child: const Text("Start")
+            ),
+            ElevatedButton(
+                onPressed: () async {
+                  await CarchingBackgroundLocator.unRegisterLocationUpdate();
+                  final _isRunning = await CarchingBackgroundLocator.isServiceRunning();
+                  setState(() {
+                    running = _isRunning;
+                  });
+                  },
+                child: const Text("Stop")
             )
           ],
         ),
