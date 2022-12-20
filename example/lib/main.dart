@@ -26,8 +26,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   ReceivePort port = ReceivePort();
 
-  String latitude = 'loading...';
-  String longitude = 'loading...';
+  String latitude = '-';
+  String longitude = '-';
   bool running = false;
 
   var isolatorName = "LocatorIsolate";
@@ -42,8 +42,8 @@ class _MyAppState extends State<MyApp> {
 
     IsolateNameServer.registerPortWithName(port.sendPort, isolatorName);
 
-    port.listen((dynamic data) {
-      print(data);
+    port.listen((dynamic data) async {
+      await updateUI(data);
     });
 
     initPlatformState();
@@ -59,6 +59,13 @@ class _MyAppState extends State<MyApp> {
     print(running.toString());
   }
 
+  Future<void> updateUI(LocationDto data) async {
+    setState(() {
+      latitude = data.latitude.toString();
+      longitude = data.longitude.toString();
+    });
+  }
+
   // Platform messages are asynchronous, so we initialize in an async method.
   @override
   Widget build(BuildContext context) {
@@ -67,56 +74,64 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Carching Background Locator'),
         ),
-        body: Column(
-          children: [
-            Text(running.toString()),
-            Text(latitude),
-            Text(longitude),
-            ElevatedButton(
-                onPressed: () async {
-                  if (await _checkLocationPermission()) {
-                    await CarchingBackgroundLocator.registerLocationUpdate(
-                        callback,
-                        iosSettings: const IOSSettings(accuracy: LocationAccuracy.NAVIGATION, distanceFilter: 0),
-                        autoStop: false,
-                        androidSettings: const AndroidSettings(
-                            accuracy: LocationAccuracy.NAVIGATION,
-                            interval: 1,
-                            distanceFilter: 0,
-                            client: LocationClient.google,
-                            androidNotificationSettings: AndroidNotificationSettings(
-                              notificationChannelName: 'Location tracking',
-                              notificationTitle: 'Start Location Tracking',
-                              notificationMsg: 'Track location in background',
-                              notificationBigMsg:
-                              'Background location is on to keep the app up-tp-date with your location. This is required for main features to work properly when the app is not running.',
-                              notificationIconColor: Colors.grey,
-                              notificationTapCallback: notificationCallback
-                            )
-                        )
-                    );
-                    final bool _isRunning = await CarchingBackgroundLocator.isServiceRunning();
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text("Is Running: " + running.toString(), textAlign: TextAlign.center,),
+              const SizedBox(height: 20,),
+              Text(!running ? latitude : "Latitude: $latitude", textAlign: TextAlign.center,),
+              const SizedBox(height: 5,),
+              Text(!running ? longitude : "Longitude: $longitude", textAlign: TextAlign.center,),
+              const SizedBox(height: 20,),
+              ElevatedButton(
+                  onPressed: () async {
+                    if (await _checkLocationPermission()) {
+                      await CarchingBackgroundLocator.registerLocationUpdate(
+                          callback,
+                          iosSettings: const IOSSettings(accuracy: LocationAccuracy.NAVIGATION, distanceFilter: 0),
+                          autoStop: false,
+                          androidSettings: const AndroidSettings(
+                              accuracy: LocationAccuracy.NAVIGATION,
+                              interval: 1,
+                              distanceFilter: 0,
+                              client: LocationClient.google,
+                              androidNotificationSettings: AndroidNotificationSettings(
+                                notificationChannelName: 'Location tracking',
+                                notificationTitle: 'Start Location Tracking',
+                                notificationMsg: 'Track location in background',
+                                notificationBigMsg:
+                                'Background location is on to keep the app up-tp-date with your location. This is required for main features to work properly when the app is not running.',
+                                notificationIconColor: Colors.grey,
+                                notificationTapCallback: notificationCallback
+                              )
+                          )
+                      );
+                      final bool _isRunning = await CarchingBackgroundLocator.isServiceRunning();
 
+                      setState(() {
+                        running = _isRunning;
+                      });
+
+                      print(_isRunning.toString());
+                    }
+                    },
+                  child: const Text("Start")
+              ),
+              ElevatedButton(
+                  onPressed: () async {
+                    await CarchingBackgroundLocator.unRegisterLocationUpdate();
+                    final _isRunning = await CarchingBackgroundLocator.isServiceRunning();
                     setState(() {
                       running = _isRunning;
                     });
-
-                    print(_isRunning.toString());
-                  }
-                  },
-                child: const Text("Start")
-            ),
-            ElevatedButton(
-                onPressed: () async {
-                  await CarchingBackgroundLocator.unRegisterLocationUpdate();
-                  final _isRunning = await CarchingBackgroundLocator.isServiceRunning();
-                  setState(() {
-                    running = _isRunning;
-                  });
-                  },
-                child: const Text("Stop")
-            )
-          ],
+                    },
+                  child: const Text("Stop")
+              )
+            ],
+          ),
         ),
       ),
     );
