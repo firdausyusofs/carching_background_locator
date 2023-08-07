@@ -239,7 +239,11 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
     }
 
     override fun onLocationUpdated(location: HashMap<Any, Any>?) {
-        FlutterInjector.instance().flutterLoader().ensureInitializationComplete(context, null)
+        context?.let {
+            FlutterInjector.instance().flutterLoader().ensureInitializationComplete(
+                it, null
+            )
+        }
 
         //https://github.com/flutter/plugins/pull/1641
         //https://github.com/flutter/flutter/issues/36059

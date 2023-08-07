@@ -24,6 +24,11 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
                 .getLong(Keys.CALLBACK_DISPATCHER_HANDLE_KEY, 0)
             val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
 
+            if(callbackInfo == null) {
+                Log.e("IsolateHolderExtension", "Fatal: failed to find callback");
+                return;
+            }
+
             // We need flutter engine to handle callback, so if it is not available we have to create a
             // Flutter engine without any view
             IsolateHolderService.backgroundEngine = FlutterEngine(context)
