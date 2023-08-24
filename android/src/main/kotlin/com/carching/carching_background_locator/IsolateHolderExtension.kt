@@ -10,6 +10,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.view.FlutterCallbackInformation
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.android.gms.location.LocationRequest
+import android.util.Log
 
 internal fun IsolateHolderService.startLocatorService(context: Context) {
     val serviceStarted = AtomicBoolean(IsolateHolderService.isServiceRunning)
