@@ -1,7 +1,10 @@
 package com.carching.carching_background_locator
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import com.carching.carching_background_locator.provider.LocationRequestOptions
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
@@ -11,6 +14,7 @@ import io.flutter.view.FlutterCallbackInformation
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.android.gms.location.LocationRequest
 import android.util.Log
+import java.lang.RuntimeException
 
 internal fun IsolateHolderService.startLocatorService(context: Context) {
     val serviceStarted = AtomicBoolean(IsolateHolderService.isServiceRunning)
@@ -19,37 +23,55 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
         this.context = context
         if (IsolateHolderService.backgroundEngine == null) {
 
-            val callbackHandle = context.getSharedPreferences(
-                Keys.SHARED_PREFERENCES_KEY,
-                Context.MODE_PRIVATE)
-                .getLong(Keys.CALLBACK_DISPATCHER_HANDLE_KEY, 0)
-            val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    val callbackHandle = context.getSharedPreferences(
+                        Keys.SHARED_PREFERENCES_KEY,
+                        Context.MODE_PRIVATE)
+                        .getLong(Keys.CALLBACK_DISPATCHER_HANDLE_KEY, 0)
 
-            if(callbackInfo == null) {
-                Log.e("IsolateHolderExtension", "Fatal: failed to find callback");
-                return;
+                    val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
+
+                    if(callbackInfo == null) {
+                        Log.e("IsolateHolderExtension", "Fatal: failed to find callback");
+                        return;
+                    }
+
+                    // We need flutter engine to handle callback, so if it is not available we have to create a
+                    // Flutter engine without any view
+                    IsolateHolderService.backgroundEngine = FlutterEngine(context)
+
+                    val args = DartExecutor.DartCallback(
+                        context.assets,
+                        FlutterInjector.instance().flutterLoader().findAppBundlePath(),
+                        callbackInfo
+                    )
+                    IsolateHolderService.backgroundEngine?.dartExecutor?.executeDartCallback(args)
+
+                    IsolateHolderService.isServiceInitialized = true
+                }
+            } catch (e: UnsatisfiedLinkError) {
+                e.printStackTrace()
             }
 
-            // We need flutter engine to handle callback, so if it is not available we have to create a
-            // Flutter engine without any view
-            IsolateHolderService.backgroundEngine = FlutterEngine(context)
 
-            val args = DartExecutor.DartCallback(
-                context.assets,
-                FlutterInjector.instance().flutterLoader().findAppBundlePath(),
-                callbackInfo
-            )
-            IsolateHolderService.backgroundEngine?.dartExecutor?.executeDartCallback(args)
         }
     }
 
-    backgroundChannel =
-        IsolateHolderService.backgroundEngine?.dartExecutor?.binaryMessenger?.let {
+    IsolateHolderService.getBinaryMessenger(context)?.let { binaryMessenger ->
+        backgroundChannel =
             MethodChannel(
-                it,
+                binaryMessenger,
                 Keys.BACKGROUND_CHANNEL_ID)
-        }!!
-    backgroundChannel.setMethodCallHandler(this)
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                backgroundChannel.setMethodCallHandler(this)
+            }
+        } catch (e: RuntimeException) {
+            e.printStackTrace()
+        }
+    }
 }
 
 fun getLocationRequest(intent: Intent): LocationRequestOptions {

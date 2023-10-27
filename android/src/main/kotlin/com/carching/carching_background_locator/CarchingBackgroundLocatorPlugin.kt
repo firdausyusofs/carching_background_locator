@@ -26,7 +26,7 @@ import io.flutter.plugin.common.PluginRegistry
 
 /** CarchingBackgroundLocatorPlugin */
 class CarchingBackgroundLocatorPlugin: MethodCallHandler, FlutterPlugin, PluginRegistry.NewIntentListener, ActivityAware {
-  private var context: Context? = null
+  internal var context: Context? = null
   private var activity: Activity? = null
 
   companion object {
@@ -100,7 +100,7 @@ class CarchingBackgroundLocatorPlugin: MethodCallHandler, FlutterPlugin, PluginR
     }
 
     @JvmStatic
-    private fun startIsolateService(context: Context, settings: Map<*, *>) {
+    internal fun startIsolateService(context: Context, settings: Map<*, *>) {
       val intent = Intent(context, IsolateHolderService::class.java)
       intent.action = IsolateHolderService.ACTION_START
       intent.putExtra(Keys.SETTINGS_ANDROID_NOTIFICATION_CHANNEL_NAME,
@@ -142,7 +142,7 @@ class CarchingBackgroundLocatorPlugin: MethodCallHandler, FlutterPlugin, PluginR
     }
 
     @JvmStatic
-    private fun initializeService(context: Context, args: Map<Any, Any>) {
+    internal fun initializeService(context: Context, args: Map<Any, Any>) {
       val callbackHandle: Long = args[Keys.ARG_CALLBACK_DISPATCHER] as Long
       setCallbackDispatcherHandle(context, callbackHandle)
     }
@@ -207,7 +207,12 @@ class CarchingBackgroundLocatorPlugin: MethodCallHandler, FlutterPlugin, PluginR
       initializeService(context, args)
 
       val settings = args[Keys.ARG_SETTINGS] as Map<*, *>
-      startIsolateService(context, settings)
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+        context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        == PackageManager.PERMISSION_GRANTED) {
+          startIsolateService(context, settings)
+      }
     }
   }
 
@@ -278,16 +283,17 @@ class CarchingBackgroundLocatorPlugin: MethodCallHandler, FlutterPlugin, PluginR
       return false
     }
 
-    val notificationCallback = PreferencesManager.getCallbackHandle(activity!!, Keys.NOTIFICATION_CALLBACK_HANDLE_KEY)
-    if (notificationCallback != null && IsolateHolderService.backgroundEngine != null) {
-      val backgroundChannel =
-        IsolateHolderService.backgroundEngine?.dartExecutor?.binaryMessenger?.let { MethodChannel(it, Keys.BACKGROUND_CHANNEL_ID) }
-      activity?.mainLooper?.let {
-        Handler(it)
-          .post {
-            backgroundChannel?.invokeMethod(Keys.BCM_NOTIFICATION_CLICK,
-              hashMapOf(Keys.ARG_NOTIFICATION_CALLBACK to notificationCallback))
-          }
+    IsolateHolderService.getBinaryMessenger(context)?.let { binaryMessenger ->
+      val notificationCallback = PreferencesManager.getCallbackHandle(activity!!, Keys.NOTIFICATION_CALLBACK_HANDLE_KEY)
+      if (notificationCallback != null && IsolateHolderService.backgroundEngine != null) {
+        val backgroundChannel = MethodChannel(binaryMessenger, Keys.BACKGROUND_CHANNEL_ID)
+        activity?.mainLooper?.let {
+          Handler(it)
+            .post {
+              backgroundChannel?.invokeMethod(Keys.BCM_NOTIFICATION_CLICK,
+                hashMapOf(Keys.ARG_NOTIFICATION_CALLBACK to notificationCallback))
+            }
+        }
       }
     }
 

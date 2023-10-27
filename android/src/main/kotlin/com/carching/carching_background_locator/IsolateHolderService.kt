@@ -21,6 +21,8 @@ import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.BinaryMessenger
+import java.lang.Exception
 
 class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateListener, Service() {
     companion object {
@@ -44,6 +46,20 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
 
         @JvmStatic
         var isServiceRunning = false
+
+        @JvmStatic
+        var isServiceInitialized = false
+
+        fun getBinaryMessenger(context: Context?): BinaryMessenger? {
+            val messenger = backgroundEngine?.dartExecutor?.binaryMessenger
+            return messenger
+                ?: if (context != null) {
+                    backgroundEngine = FlutterEngine(context)
+                    backgroundEngine?.dartExecutor?.binaryMessenger
+                } else {
+                    messenger
+                }
+        }
     }
 
     private var notificationChannelName = "Carching Locator"
@@ -55,7 +71,7 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
     private var wakeLockTime = 60 * 60 * 1000L
     private var locatorClient: BLLocationProvider? = null
     internal lateinit var backgroundChannel: MethodChannel
-    internal lateinit var context: Context
+    internal var context: Context? = null
     private var pluggables: ArrayList<Pluggable> = ArrayList()
 
     override fun onBind(p0: Intent?): IBinder? {
@@ -80,7 +96,7 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
         startForeground(notificationId, notification)
 
         pluggables.forEach {
-            it.onServiceStart(context)
+            context?.let { it1 -> it.onServiceStart(it1) }
         }
     }
 
@@ -150,11 +166,11 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
         notificationIconColor = intent.getLongExtra(Keys.SETTINGS_ANDROID_NOTIFICATION_ICON_COLOR, 0).toInt()
         wakeLockTime = intent.getIntExtra(Keys.SETTINGS_ANDROID_WAKE_LOCK_TIME, 60) * 60 * 1000L
 
-        locatorClient = getLocationClient(context)
+        locatorClient = context?.let { getLocationClient(it) }
         locatorClient?.requestLocationUpdates(getLocationRequest(intent))
 
         // Fill pluggable list
-        if( intent.hasExtra(Keys.SETTINGS_INIT_PLUGGABLE)) {
+        if ( intent.hasExtra(Keys.SETTINGS_INIT_PLUGGABLE)) {
             pluggables.add(InitPluggable())
         }
 
@@ -179,7 +195,7 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
         stopSelf()
 
         pluggables.forEach {
-            it.onServiceDispose(context)
+            context?.let { it1 -> it.onServiceDispose(it1) }
         }
     }
 
@@ -215,14 +231,19 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        when (call.method) {
-            Keys.METHOD_SERVICE_INITIALIZED -> {
-                isServiceRunning = true
+        try {
+            when (call.method) {
+                Keys.METHOD_SERVICE_INITIALIZED -> {
+                    isServiceRunning = true
+                }
+                else -> result.notImplemented()
             }
-            else -> result.notImplemented()
+
+            result.success(null)
+        } catch (e: Exception) {
+
         }
 
-        result.success(null)
     }
 
     override fun onDestroy() {
@@ -239,24 +260,30 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
     }
 
     override fun onLocationUpdated(location: HashMap<Any, Any>?) {
-        context?.let {
-            FlutterInjector.instance().flutterLoader().ensureInitializationComplete(
-                it, null
-            )
-        }
+        try {
+            context?.let {
+                FlutterInjector.instance().flutterLoader().ensureInitializationComplete(
+                    it, null
+                )
+            }
 
-        //https://github.com/flutter/plugins/pull/1641
-        //https://github.com/flutter/flutter/issues/36059
-        //https://github.com/flutter/plugins/pull/1641/commits/4358fbba3327f1fa75bc40df503ca5341fdbb77d
-        // new version of flutter can not invoke method from background thread
-        if (location != null) {
-            val callback = PreferencesManager.getCallbackHandle(context, Keys.CALLBACK_HANDLE_KEY) as Long
+            //https://github.com/flutter/plugins/pull/1641
+            //https://github.com/flutter/flutter/issues/36059
+            //https://github.com/flutter/plugins/pull/1641/commits/4358fbba3327f1fa75bc40df503ca5341fdbb77d
+            // new version of flutter can not invoke method from background thread
+            if (location != null) {
+                val callback = context?.let {
+                    PreferencesManager.getCallbackHandle(it, Keys.CALLBACK_HANDLE_KEY)
+                } as Long
 
-            val result: HashMap<Any, Any> =
-                hashMapOf(Keys.ARG_CALLBACK to callback,
-                    Keys.ARG_LOCATION to location)
+                val result: HashMap<Any, Any> =
+                    hashMapOf(Keys.ARG_CALLBACK to callback,
+                        Keys.ARG_LOCATION to location)
 
-            sendLocationEvent(result)
+                sendLocationEvent(result)
+            }
+        } catch (e: Exception) {
+
         }
     }
 
@@ -267,13 +294,19 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
         // new version of flutter can not invoke method from background thread
 
         if (backgroundEngine != null) {
-            val backgroundChannel =
-                backgroundEngine?.dartExecutor?.binaryMessenger?.let { MethodChannel(it, Keys.BACKGROUND_CHANNEL_ID) }
-            Handler(context.mainLooper)
-                .post {
-                    Log.d("plugin", "sendLocationEvent $result")
-                    backgroundChannel?.invokeMethod(Keys.BCM_SEND_LOCATION, result)
+            context?.let {
+                val backgroundChannel = IsolateHolderService.getBinaryMessenger(it)?.let { binaryMessenger ->
+                    MethodChannel(binaryMessenger, Keys.BACKGROUND_CHANNEL_ID)
                 }
+            }
+
+            context?.let {
+                Handler(it.mainLooper)
+                    .post {
+                        Log.d("plugin", "sendLocationEvent $result")
+                        backgroundChannel?.invokeMethod(Keys.BCM_SEND_LOCATION, result)
+                    }
+            }
         }
     }
 
