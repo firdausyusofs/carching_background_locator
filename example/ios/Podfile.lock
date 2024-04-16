@@ -1,0 +1,28 @@
+PODS:
+  - carching_background_locator (0.0.2):
+    - Flutter
+  - Flutter (1.0.0)
+  - "location_permissions (3.0.0+1)":
+    - Flutter
+
+DEPENDENCIES:
+  - carching_background_locator (from `.symlinks/plugins/carching_background_locator/ios`)
+  - Flutter (from `Flutter`)
+  - location_permissions (from `.symlinks/plugins/location_permissions/ios`)
+
+EXTERNAL SOURCES:
+  carching_background_locator:
+    :path: ".symlinks/plugins/carching_background_locator/ios"
+  Flutter:
+    :path: Flutter
+  location_permissions:
+    :path: ".symlinks/plugins/location_permissions/ios"
+
+SPEC CHECKSUMS:
+  carching_background_locator: b5e8bbf8504caf6d4c0fd92b81bbeb564bd8dc03
+  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  location_permissions: 7e0f9aa0f60deb8ff93ddf0e2a164c7e8197bc94
+
+PODFILE CHECKSUM: 7368163408c647b7eb699d0d788ba6718e18fb8d
+
+COCOAPODS: 1.11.3
