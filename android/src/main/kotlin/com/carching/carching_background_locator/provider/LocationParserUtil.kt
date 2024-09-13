@@ -18,16 +18,16 @@ class LocationParserUtil {
             }
 
             return hashMapOf(
-                Keys.ARG_IS_MOCKED to isMocked,
-                Keys.ARG_LATITUDE to location.latitude,
-                Keys.ARG_LONGITUDE to location.longitude,
-                Keys.ARG_ACCURACY to location.accuracy,
-                Keys.ARG_ALTITUDE to location.altitude,
-                Keys.ARG_SPEED to location.speed,
-                Keys.ARG_SPEED_ACCURACY to speedAccuracy,
-                Keys.ARG_HEADING to location.bearing,
-                Keys.ARG_TIME to location.time.toDouble(),
-                Keys.ARG_PROVIDER to location.provider,
+                Keys.ARG_IS_MOCKED to isMocked as Any,
+                Keys.ARG_LATITUDE to location.latitude as Any,
+                Keys.ARG_LONGITUDE to location.longitude as Any,
+                Keys.ARG_ACCURACY to location.accuracy as Any,
+                Keys.ARG_ALTITUDE to location.altitude as Any,
+                Keys.ARG_SPEED to location.speed as Any,
+                Keys.ARG_SPEED_ACCURACY to speedAccuracy as Any,
+                Keys.ARG_HEADING to location.bearing as Any,
+                Keys.ARG_TIME to location.time.toDouble() as Any,
+                Keys.ARG_PROVIDER to location.provider as Any
             )
         }
 
